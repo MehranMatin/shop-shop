@@ -5,6 +5,7 @@ import {
   UPDATE_CURRENT_CATEGORY
 } from '../../utils/actions';
 import { useStoreContext } from '../../utils/GlobalState';
+import { idbPromise } from '../../utils/helpers';
 import { QUERY_CATEGORIES } from '../../utils/queries';
 
 function CategoryMenu() {
@@ -13,7 +14,7 @@ function CategoryMenu() {
   // because we only need the categories array out of our global state, we simply destructure it out of state so we can use it to provide to our returning JSX
   const { categories } = state;
   // destructure the categoryData that returns from the useQuery() Hook
-  const { data: categoryData } = useQuery(QUERY_CATEGORIES);
+  const { loading, data: categoryData } = useQuery(QUERY_CATEGORIES);
 
   // categoryData is going to be undefined on load because the useQuery() Hook isn't done with its request just yet, meaning that when useEffect hook initially runs the if statement will not
   // when it notices that categoryData is not undefined anymore the hook runs again, thus running the if statement which includes the dispatch() function that setting our category data to the global state
@@ -28,10 +29,20 @@ function CategoryMenu() {
           // and the data to set our for categories to
           categories: categoryData.categories
         });
+        categoryData.categories.forEach((category) => {
+          idbPromise('categories', 'put', category);
+        });
+      } else if (!loading) {
+        idbPromise('categories', 'get').then((categories) => {
+          dispatch({
+            type: UPDATE_CATEGORIES,
+            categories: categories
+          });
+        });
       }
     },
     // second argument in hook is the condition
-    [categoryData, dispatch]
+    [categoryData, loading, dispatch]
   );
 
   const handleClick = (id) => {
